@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transkrip</title>
+<style>
+  :root {
+    --bg: #f4f6fb; --panel: #fff; --side: #fff; --text: #172033; --muted: #6b7489; --faint: #9aa2b4;
+    --line: #e5e8f0; --hover: #f1f4fa;
+    --accent: #2563eb; --accent-2: #1d4ed8; --accent-soft: #e9f0ff; --on-accent: #fff;
+    --ok: #15803d; --ok-soft: #e7f6ec; --warn: #b45309; --warn-soft: #fdf3e2; --bad: #c2362b; --bad-soft: #fdecea;
+    --active: #fff5cc; --hit: #fde68a;
+    --shadow: 0 1px 2px rgba(20, 30, 60, .05), 0 4px 16px rgba(20, 30, 60, .06);
+    --s1: #2563eb; --s2: #db2777; --s3: #059669; --s4: #d97706; --s5: #7c3aed; --s6: #0891b2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1218; --panel: #171b23; --side: #13161d; --text: #e6e9f0; --muted: #9aa3b5; --faint: #6b7385;
+      --line: #262b36; --hover: #1d222c;
+      --accent: #6b9bff; --accent-2: #8bb0ff; --accent-soft: #1b2640; --on-accent: #0b1020;
+      --ok: #4cc38a; --ok-soft: #13291e; --warn: #f0b45a; --warn-soft: #2c2214; --bad: #ff7b72; --bad-soft: #2f1716;
+      --active: #3a3214; --hit: #6b5513;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+      --s1: #6b9bff; --s2: #f472b6; --s3: #34d399; --s4: #fbbf24; --s5: #a78bfa; --s6: #22d3ee;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14.5px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  svg { width: 18px; height: 18px; flex: none; }
+  [hidden] { display: none !important; }
+
+  /* ---------- kerangka ---------- */
+  .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+  .side { background: var(--side); border-right: 1px solid var(--line); padding: 20px 14px;
+          position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 4px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; padding: 4px 10px 20px; }
+  .brand i { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: var(--on-accent);
+             display: grid; place-items: center; }
+  .nav a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
+           color: var(--muted); text-decoration: none; font-weight: 500; }
+  .nav a:hover { background: var(--hover); color: var(--text); }
+  .nav a.on { background: var(--accent-soft); color: var(--accent); }
+  .side .grow { flex: 1; }
+  .side .foot { font-size: 12px; color: var(--faint); padding: 0 10px; }
+  .main { min-width: 0; }
+  .page { max-width: 1120px; margin: 0 auto; padding: 28px 32px 64px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--panel);
+         padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+  .btn:hover { background: var(--hover); }
+  a.btn { color: var(--text); text-decoration: none; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { background: var(--accent-2); }
+  .btn.icon { padding: 7px; }
+  .btn.quiet { border-color: transparent; background: transparent; }
+  .btn.quiet:hover { background: var(--hover); }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+  .head h1 { margin: 0; font-size: 24px; letter-spacing: -.01em; }
+  .head p { margin: 2px 0 0; color: var(--muted); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+
+  .banner { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 16px;
+            background: var(--warn-soft); color: var(--warn); border-radius: 10px; }
+  .banner a { color: inherit; font-weight: 600; }
+
+  /* ---------- beranda ---------- */
+  .hero { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .drop { padding: 22px; display: flex; gap: 16px; align-items: center; cursor: pointer;
+          border: 1.5px dashed var(--line); transition: .15s; }
+  .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop .ic { width: 48px; height: 48px; border-radius: 12px; background: var(--accent-soft); color: var(--accent);
+              display: grid; place-items: center; }
+  .drop .ic svg { width: 24px; height: 24px; }
+  .drop b { display: block; font-size: 15.5px; }
+  .drop span { color: var(--muted); font-size: 13px; }
+  .stat { padding: 18px 20px; }
+  .stat small { color: var(--muted); font-size: 12.5px; }
+  .stat div { font-size: 26px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+  .files-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px;
+                border-bottom: 1px solid var(--line); }
+  .files-head h2 { font-size: 15px; margin: 0; }
+  .search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px;
+            padding: 6px 10px; background: var(--bg); color: var(--muted); min-width: 240px; }
+  .search input { border: 0; outline: 0; background: transparent; width: 100%; color: var(--text); }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th.w-dur { width: 100px; } th.w-date { width: 170px; } th.w-st { width: 190px; } th.w-act { width: 64px; }
+  th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase;
+       letter-spacing: .04em; padding: 10px 18px; border-bottom: 1px solid var(--line); }
+  td { padding: 12px 18px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr.click { cursor: pointer; }
+  tbody tr.click:hover { background: var(--hover); }
+  .fname { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .ftype { width: 36px; height: 36px; border-radius: 9px; display: grid; place-items: center; flex: none;
+           background: var(--accent-soft); color: var(--accent); }
+  .ftype.video { background: color-mix(in srgb, var(--s5) 16%, transparent); color: var(--s5); }
+  .fname .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fname .p { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fname > div { min-width: 0; }
+  .num { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
+           padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.run { background: var(--accent-soft); color: var(--accent); }
+  .badge.bad { background: var(--bad-soft); color: var(--bad); }
+  .mini { width: 90px; height: 5px; border-radius: 9px; background: var(--line); overflow: hidden; margin-top: 6px; }
+  .mini > div { height: 100%; background: var(--accent); transition: width .4s; }
+  .sub { font-size: 12px; color: var(--muted); margin-top: 2px; max-width: 260px; }
+  .sub.bad { color: var(--bad); }
+  .empty { padding: 48px 18px; text-align: center; color: var(--muted); }
+  td.act { text-align: right; }
+  td.act .btn { color: var(--faint); }
+  td.act .btn:hover { color: var(--bad); }
+
+  /* ---------- editor ---------- */
+  .ed { display: flex; flex-direction: column; min-height: 100vh; }
+  .ed-top { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent);
+            backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .ed-top .in { max-width: 1120px; margin: 0 auto; padding: 12px 32px; display: flex; align-items: center; gap: 12px; }
+  .ed-title { flex: 1; min-width: 0; }
+  .ed-title input { width: 100%; border: 1px solid transparent; background: transparent; border-radius: 6px;
+                    font-size: 18px; font-weight: 700; padding: 2px 6px; margin-left: -6px; text-overflow: ellipsis; }
+  .ed-title input:hover { border-color: var(--line); }
+  .ed-title input:focus { border-color: var(--accent); outline: 0; background: var(--panel); }
+  .ed-title .meta { color: var(--muted); font-size: 12.5px; }
+  .ed-tools { display: flex; gap: 8px; align-items: center; }
+  .ed-tools .search { min-width: 200px; }
+  .ed-tools .search .cnt { font-size: 12px; white-space: nowrap; }
+  .menu { position: relative; }
+  .menu-list { position: absolute; right: 0; top: calc(100% + 6px); background: var(--panel); border: 1px solid var(--line);
+               border-radius: 10px; box-shadow: var(--shadow); padding: 6px; min-width: 200px; z-index: 10; }
+  .menu-list button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px;
+                      border: 0; background: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; text-align: left; }
+  .menu-list button:hover { background: var(--hover); }
+  .menu-list small { color: var(--muted); }
+
+  .ed-body { flex: 1; }
+  .doc { max-width: 820px; margin: 24px auto 140px; padding: 32px 40px; }
+  .note { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted);
+          background: var(--bg); border-radius: 8px; padding: 10px 12px; margin-bottom: 20px; }
+  .blk { display: grid; grid-template-columns: 76px 1fr; gap: 14px; padding: 8px 0; }
+  .blk time { font-size: 12.5px; color: var(--faint); font-variant-numeric: tabular-nums; padding-top: 3px; cursor: pointer; }
+  .blk time:hover { color: var(--accent); }
+  .spk { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; cursor: pointer;
+         font-weight: 700; font-size: 13.5px; color: var(--c); margin-bottom: 2px; }
+  .spk::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .spk:hover { text-decoration: underline; }
+  .blk p { margin: 0; font-size: 15.5px; line-height: 1.75; }
+  .seg { border-radius: 3px; cursor: pointer; transition: background .15s; }
+  .seg:hover { background: var(--hover); }
+  .seg.cur { background: var(--active); }
+  .seg.hit { background: var(--hit); }
+  .seg.hit-cur { outline: 2px solid var(--warn); }
+  .editing .seg { cursor: text; }
+  .editing .seg[contenteditable]:focus { outline: 0; background: var(--accent-soft); }
+  .editing .doc { box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow); }
+  .editbar { display: flex; align-items: center; gap: 10px; background: var(--accent-soft); color: var(--accent);
+             padding: 8px 32px; font-size: 13px; }
+  .editbar .in { max-width: 1120px; margin: 0 auto; display: flex; gap: 10px; align-items: center; width: 100%; }
+  .editbar span { flex: 1; }
+  .working { max-width: 520px; margin: 80px auto; text-align: center; padding: 32px; }
+  .working .bar { height: 8px; border-radius: 9px; background: var(--line); overflow: hidden; margin: 18px 0 10px; }
+  .working .bar > div { height: 100%; background: var(--accent); transition: width .4s; }
+
+  .player { position: fixed; left: 232px; right: 0; bottom: 0; z-index: 6; background: var(--panel);
+            border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(20, 30, 60, .06); }
+  .player .in { max-width: 1120px; margin: 0 auto; padding: 12px 32px; display: flex; align-items: center; gap: 12px; }
+  .play { width: 42px; height: 42px; border-radius: 50%; border: 0; background: var(--accent); color: var(--on-accent);
+          display: grid; place-items: center; cursor: pointer; flex: none; }
+  .play svg { width: 20px; height: 20px; }
+  .player .tm { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 52px; text-align: center; }
+  .player input[type=range] { flex: 1; accent-color: var(--accent); min-width: 60px; }
+  .player select { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 4px 6px; }
+
+  /* ---------- pengaturan ---------- */
+  .set { padding: 20px 22px; margin-bottom: 16px; }
+  .set h2 { margin: 0 0 4px; font-size: 16px; }
+  .set p { margin: 0 0 14px; color: var(--muted); }
+  .set code { background: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .field { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+  .field:focus { outline: 0; border-color: var(--accent); }
+  .ok-text { color: var(--ok); font-weight: 600; }
+  .err-text { color: var(--bad); }
+  .models { display: grid; gap: 8px; }
+  .models div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--bg);
+                border-radius: 8px; font-size: 13.5px; }
+  .models code { background: none; padding: 0; font-weight: 600; }
+
+  /* ---------- dialog unggah ---------- */
+  dialog { border: 0; border-radius: 14px; padding: 0; width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
+           background: var(--panel); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .25); }
+  dialog::backdrop { background: rgba(15, 20, 35, .45); }
+  .dlg-h { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px 0; }
+  .dlg-h h2 { margin: 0; font-size: 17px; }
+  .dlg-b { padding: 16px 22px; display: grid; gap: 14px; }
+  #dlgForm { display: flex; flex-direction: column; max-height: calc(100vh - 32px); }
+  .dlg-b { overflow: auto; min-height: 0; }
+  .dlg-f { padding: 14px 22px 18px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--line); }
+  .picked { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+  .picked .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picked > div:not(.ftype) { min-width: 0; flex: 1; }
+  .picked.add { border-style: dashed; cursor: pointer; color: var(--muted); }
+  .picked.add:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .plist { display: grid; gap: 8px; }
+  .plist .picked { padding: 8px 10px; }
+  .plist .ftype { width: 32px; height: 32px; }
+  .badge.wait { background: var(--hover); color: var(--muted); }
+  label.l { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+
+  .toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--text); color: var(--bg);
+           padding: 9px 16px; border-radius: 8px; font-size: 13.5px; z-index: 20; opacity: 0; transition: .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  /* ---------- layar kecil ---------- */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr 1fr; }
+    .hero .drop { grid-column: 1 / -1; }
+  }
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .side { position: static; height: auto; flex-direction: row; align-items: center; padding: 8px 12px; z-index: 8;
+            border-right: 0; border-bottom: 1px solid var(--line); }
+    .brand { padding: 0 8px 0 0; font-size: 15px; }
+    .brand i { width: 26px; height: 26px; }
+    .nav { display: flex; gap: 2px; margin-left: auto; }
+    .nav a { padding: 7px 9px; }
+    .nav a span, .side .grow, .side .foot { display: none; }
+    .page { padding: 20px 16px 48px; }
+    .head h1 { font-size: 20px; }
+    .search { min-width: 0; flex: 1; }
+    .files-head { flex-wrap: wrap; padding: 12px 14px; }
+    th.hide-s, td.hide-s { display: none; }
+    th.w-st { width: 118px; } th.w-act { width: 48px; }
+    td, th { padding: 10px 14px; }
+    .ed-top .in { padding: 10px 16px; flex-wrap: wrap; }
+    .ed-tools { width: 100%; }
+    .ed-tools .search { min-width: 0; }
+    .ed-tools .lbl { display: none; }
+    .doc { padding: 20px 18px; margin: 12px 8px 140px; }
+    .blk { grid-template-columns: 1fr; gap: 0; }
+    .player { left: 0; }
+    .player .in { padding: 10px 14px; gap: 8px; }
+    .player .skip { display: none; }
+    .editbar { padding: 8px 16px; }
+    .two { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><i id="brandIc"></i>Transkrip</div>
+    <nav class="nav">
+      <a href="#/" data-nav="home"><span data-ic="home"></span><span>Beranda</span></a>
+      <a href="#/settings" data-nav="settings"><span data-ic="gear"></span><span>Pengaturan</span></a>
+    </nav>
+    <div class="grow"></div>
+    <div class="foot">Didukung OpenAI Speech-to-Text</div>
+  </aside>
+
+  <div class="main">
+    <!-- BERANDA -->
+    <section id="vHome" class="page" hidden>
+      <div class="head">
+        <div><h1>Beranda</h1><p>Unggah rekaman, lalu baca, sunting, dan ekspor transkripnya.</p></div>
+        <button class="btn primary" id="upBtn"><span data-ic="upload"></span>Unggah file</button>
+      </div>
+      {% if not has_key %}
+      <div class="banner"><span data-ic="alert"></span>API key OpenAI belum diatur.
+        {% if is_local %}<a href="#/settings">Atur di Pengaturan</a>{% else %}Minta pemilik server mengaturnya.{% endif %}</div>
+      {% endif %}
+      <div class="hero">
+        <div class="panel drop" id="drop">
+          <div class="ic"><span data-ic="upload"></span></div>
+          <div><b>Transkrip audio atau video</b><span>Klik atau tarik file ke sini · MP3, M4A, WAV, OPUS, MP4, MOV</span></div>
+        </div>
+        <div class="panel stat"><small>Jumlah file</small><div id="stFiles">–</div></div>
+        <div class="panel stat"><small>Total durasi</small><div id="stDur">–</div></div>
+      </div>
+      <div class="panel">
+        <div class="files-head">
+          <h2>Semua file</h2>
+          <label class="search"><span data-ic="search"></span><input id="q" placeholder="Cari nama atau isi…"></label>
+        </div>
+        <table>
+          <thead><tr><th>Nama</th><th class="hide-s w-dur">Durasi</th><th class="hide-s w-date">Tanggal</th><th class="w-st">Status</th><th class="w-act"></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div class="empty" id="empty" hidden>Belum ada file. Unggah rekaman pertama Anda.</div>
+      </div>
+    </section>
+
+    <!-- EDITOR -->
+    <section id="vEditor" class="ed" hidden>
+      <div class="ed-top"><div class="in">
+        <a class="btn icon quiet" href="#/" title="Kembali"><span data-ic="back"></span></a>
+        <div class="ed-title">
+          <input id="title" aria-label="Judul">
+          <div class="meta" id="meta"></div>
+        </div>
+        <div class="ed-tools" id="tools">
+          <label class="search"><span data-ic="search"></span><input id="fq" placeholder="Cari di transkrip"><span class="cnt" id="fcnt"></span></label>
+          <button class="btn" id="editBtn"><span data-ic="pen"></span><span class="lbl">Sunting</span></button>
+          <div class="menu">
+            <button class="btn primary" id="expBtn"><span data-ic="download"></span><span class="lbl">Ekspor</span></button>
+            <div class="menu-list" id="expMenu" hidden>
+              <button data-copy>Salin teks <small>⌘C</small></button>
+              <button data-fmt="txt">Teks <small>.txt</small></button>
+              <button data-fmt="srt">Subtitle <small>.srt</small></button>
+              <button data-fmt="vtt">Subtitle web <small>.vtt</small></button>
+              <button data-fmt="json">Data <small>.json</small></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="editbar" id="editbar" hidden><div class="in">
+        <span>Mode sunting — klik teks untuk mengubah. Klik nama pembicara untuk mengganti namanya.</span>
+        <button class="btn" id="cancelEdit">Batal</button>
+        <button class="btn primary" id="saveEdit">Simpan</button>
+      </div></div>
+      </div>
+      <div class="ed-body"><div id="docWrap"></div></div>
+      <div class="player" id="player" hidden><div class="in">
+        <button class="btn icon quiet skip" id="back5" title="Mundur 5 detik"><span data-ic="rw"></span></button>
+        <button class="play" id="playBtn" title="Putar (spasi)"><span data-ic="play"></span></button>
+        <button class="btn icon quiet skip" id="fwd5" title="Maju 5 detik"><span data-ic="ff"></span></button>
+        <span class="tm" id="tCur">0:00</span>
+        <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Posisi">
+        <span class="tm" id="tDur">0:00</span>
+        <select id="rate" aria-label="Kecepatan">
+          <option value="0.75">0.75×</option><option value="1" selected>1×</option>
+          <option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option>
+        </select>
+      </div></div>
+      <audio id="audio" preload="metadata"></audio>
+    </section>
+
+    <!-- PENGATURAN -->
+    <section id="vSettings" class="page" hidden>
+      <div class="head"><div><h1>Pengaturan</h1><p>API key, akses jaringan, dan pilihan model.</p></div></div>
+      <div class="panel set">
+        <h2>API key OpenAI</h2>
+        {% if is_local %}
+        <p>Disimpan di file <code>.env</code> folder aplikasi, hanya di komputer ini.
+          Status: <span id="keyStatus" class="{{ 'ok-text' if has_key else 'err-text' }}">{{ 'sudah diatur' if has_key else 'belum diatur' }}</span></p>
+        <div class="row">
+          <input class="field" id="keyInput" type="password" placeholder="sk-..." autocomplete="off" style="flex:1;min-width:220px">
+          <button class="btn primary" id="keySave">Simpan</button>
+        </div>
+        <p class="err-text" id="keyErr" style="margin:8px 0 0"></p>
+        {% else %}
+        <p>API key hanya bisa diganti dari komputer yang menjalankan aplikasi ini.</p>
+        {% endif %}
+      </div>
+      <div class="panel set">
+        <h2>Akses dari perangkat lain</h2>
+        {% if host == "0.0.0.0" %}
+        <p>Aktif. Perangkat lain di jaringan yang sama bisa membuka aplikasi ini lewat IP komputer ini di port 5100,
+          dengan kata sandi <code>APP_PASSWORD</code> dari file <code>.env</code>.</p>
+        {% else %}
+        <p>Nonaktif. Isi <code>HOST=0.0.0.0</code> dan <code>APP_PASSWORD</code> di <code>.env</code>, lalu jalankan ulang.</p>
+        {% endif %}
+      </div>
+      <div class="panel set">
+        <h2>Model</h2>
+        <p>Dipilih setiap kali mengunggah file.</p>
+        <div class="models">
+          {% for key, label in models.items() %}<div><code>{{ key }}</code><span>{{ label.split('— ')[-1] }}</span></div>{% endfor %}
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" id="dlgForm">
+    <div class="dlg-h"><h2 id="dlgTitle">Transkrip file baru</h2><button class="btn icon quiet" value="cancel" formnovalidate><span data-ic="x"></span></button></div>
+    <div class="dlg-b">
+      <div class="plist" id="plist"></div>
+      <div class="picked add" id="pickAdd">
+        <div class="ftype"><span data-ic="upload"></span></div>
+        <div><div class="t" id="pickAddT">Pilih file</div><div class="hint">Bisa pilih beberapa file sekaligus</div></div>
+      </div>
+      <input type="file" id="file" multiple accept="audio/*,video/*,.m4a,.mp3,.wav,.mp4,.mov,.mkv,.webm,.ogg,.opus,.flac,.aac" hidden>
+      <div class="two">
+        <div>
+          <label class="l" for="language">Bahasa</label>
+          <select class="field" id="language">
+            <option value="id" selected>Indonesia</option><option value="en">Inggris</option>
+            <option value="jv">Jawa</option><option value="su">Sunda</option><option value="ms">Melayu</option>
+            <option value="ar">Arab</option><option value="">Deteksi otomatis</option>
+          </select>
+        </div>
+        <div>
+          <label class="l" for="model">Model</label>
+          <select class="field" id="model">
+            {% for key, label in models.items() %}<option value="{{ key }}" {% if key == default_model %}selected{% endif %}>{{ label.split(' — ')[0] }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="hint" id="modelHint" style="margin-top:-6px"></div>
+      <div>
+        <label class="l" for="prompt">Istilah khusus (opsional)</label>
+        <textarea class="field" id="prompt" rows="2" placeholder="Pisahkan dengan koma. Contoh: ACS, WEBACS, FTTH, Metabase"></textarea>
+      </div>
+      <div class="err-text" id="dlgErr"></div>
+    </div>
+    <div class="dlg-f">
+      <button class="btn" value="cancel" formnovalidate>Batal</button>
+      <button class="btn primary" id="go" value="go" disabled>Mulai transkrip</button>
+    </div>
+  </form>
+</dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const IC = {
+  logo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>',
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  audio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+  video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="14" height="14" rx="2"/><path d="m16 10 6-3v10l-6-3"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>',
+  pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>',
+  rw: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>',
+  ff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/></svg>',
+};
+const paintIcons = (root = document) => root.querySelectorAll("[data-ic]").forEach((el) => { el.outerHTML = IC[el.dataset.ic]; });
+$("brandIc").innerHTML = IC.logo;
+paintIcons();
+
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const clock = (s) => {
+  s = Math.max(0, Math.floor(s || 0));
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+};
+const human = (s) => {
+  const h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60);
+  return h ? `${h} j ${m} mnt` : `${m} mnt`;
+};
+const fdate = (t) => new Date(t * 1000).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const fsize = (b) => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1048576).toFixed(1)} MB`;
+const isVideo = (name) => /\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(name);
+function toast(msg) {
+  $("toast").textContent = msg; $("toast").classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(() => $("toast").classList.remove("show"), 1800);
+}
+async function api(url, opts = {}) {
+  const r = await fetch(url, opts);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `Gagal (${r.status})`);
+  return j;
+}
+
+/* ================= router ================= */
+let dirty = false;
+window.addEventListener("beforeunload", (e) => { if (dirty || uploads.length) e.preventDefault(); });
+function route() {
+  const h = location.hash || "#/";
+  const m = h.match(/^#\/f\/([0-9a-f]{32})$/);
+  if (!m) stopAudio();
+  $("vHome").hidden = !(h === "#/" || h === "#");
+  $("vSettings").hidden = h !== "#/settings";
+  $("vEditor").hidden = !m;
+  document.querySelectorAll("[data-nav]").forEach((a) =>
+    a.classList.toggle("on", (a.dataset.nav === "settings") === (h === "#/settings") && !m));
+  if (m) openFile(m[1]);
+  else if (h === "#/settings") {}
+  else { $("vHome").hidden = false; loadFiles(); }
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", (e) => {
+  if (dirty && !confirm("Suntingan belum disimpan. Tinggalkan halaman?")) {
+    history.replaceState(null, "", e.oldURL.slice(e.oldURL.indexOf("#"))); return;
+  }
+  dirty = false; route();
+});
+
+/* ================= beranda ================= */
+let files = [], pollT = null;
+let uploads = [];  // antrean unggah di browser ini: {key, filename, created, status, progress, file, opts}
+
+async function loadFiles() {
+  try { files = await api("/api/files"); } catch { return; }
+  renderFiles();
+  clearTimeout(pollT);
+  if (files.some((f) => f.status === "running") && !$("vHome").hidden) pollT = setTimeout(loadFiles, 2000);
+}
+
+function statusCell(f) {
+  if (f.status === "queued") return `<span class="badge wait">Menunggu unggah</span>`;
+  if (f.status === "running" && !f.progress && /antrean/i.test(f.message || "")) return `<span class="badge wait">Antre</span>
+    <div class="sub">Menunggu file lain selesai</div>`;
+  if (f.status === "uploading") return `<span class="badge run">Mengunggah ${Math.round(f.progress * 100)}%</span>
+    <div class="mini"><div style="width:${f.progress * 100}%"></div></div>`;
+  if (f.status === "running") return `<span class="badge run">Diproses ${Math.round(f.progress * 100)}%</span>
+    <div class="mini"><div style="width:${f.progress * 100}%"></div></div><div class="sub">${esc(f.message)}</div>`;
+  if (f.status === "error") return `<span class="badge bad">Gagal</span><div class="sub bad">${esc(f.message)}</div>`;
+  return `<span class="badge ok">Selesai</span>`;
+}
+
+function renderFiles() {
+  const q = $("q").value.trim().toLowerCase();
+  const all = [...uploads, ...files];
+  const list = all.filter((f) => !q || f.filename.toLowerCase().includes(q) || (f.preview || "").toLowerCase().includes(q));
+  const done = files.filter((f) => f.status === "done");
+  $("stFiles").textContent = done.length;
+  $("stDur").textContent = human(done.reduce((a, f) => a + (f.duration || 0), 0));
+  $("empty").hidden = list.length > 0;
+  $("empty").textContent = q ? "Tidak ada file yang cocok." : "Belum ada file. Unggah rekaman pertama Anda.";
+  $("rows").innerHTML = list.map((f) => `
+    <tr class="${f.status === "done" ? "click" : ""}" data-id="${f.id || ""}">
+      <td><div class="fname">
+        <div class="ftype ${isVideo(f.filename) ? "video" : ""}">${isVideo(f.filename) ? IC.video : IC.audio}</div>
+        <div><div class="t">${esc(f.filename)}</div><div class="p">${esc(f.preview || f.model || "")}</div></div>
+      </div></td>
+      <td class="num hide-s">${f.duration ? clock(f.duration) : "–"}</td>
+      <td class="num hide-s">${fdate(f.created)}</td>
+      <td>${statusCell(f)}</td>
+      <td class="act">${f.status === "done" || f.status === "error"
+        ? `<button class="btn icon quiet del" title="Hapus">${IC.trash}</button>` : ""}</td>
+    </tr>`).join("");
+}
+
+$("rows").addEventListener("click", async (e) => {
+  const tr = e.target.closest("tr"); if (!tr || !tr.dataset.id) return;
+  if (e.target.closest(".del")) {
+    const f = files.find((x) => x.id === tr.dataset.id);
+    if (!confirm(`Hapus "${f.filename}" beserta transkripnya?`)) return;
+    try { await api(`/api/jobs/${tr.dataset.id}`, { method: "DELETE" }); toast("File dihapus"); }
+    catch (err) { toast(err.message); }
+    return loadFiles();
+  }
+  if (tr.classList.contains("click")) location.hash = `#/f/${tr.dataset.id}`;
+});
+$("q").addEventListener("input", renderFiles);
+
+/* ---------- unggah ---------- */
+let picked = [];
+const MODEL_HINT = {
+  "whisper-1": "Waktu per kalimat yang presisi — paling cocok untuk subtitle.",
+  "gpt-4o-transcribe-diarize": "Memberi label pembicara (A, B, …) per bagian 10 menit.",
+  "gpt-transcribe": "Model terbaru; istilah khusus dipakai sebagai kata kunci.",
+};
+const updHint = () => $("modelHint").textContent = MODEL_HINT[$("model").value]
+  || "Waktu per paragraf diperkirakan. Pakai Whisper bila butuh subtitle presisi.";
+$("model").onchange = updHint; updHint();
+
+function renderPicked() {
+  $("plist").innerHTML = picked.map((f, i) => `
+    <div class="picked">
+      <div class="ftype ${isVideo(f.name) ? "video" : ""}">${isVideo(f.name) ? IC.video : IC.audio}</div>
+      <div><div class="t">${esc(f.name)}</div><div class="hint">${fsize(f.size)}</div></div>
+      <button type="button" class="btn icon quiet" data-rm="${i}" title="Buang dari daftar">${IC.x}</button>
+    </div>`).join("");
+  $("pickAddT").textContent = picked.length ? "Tambah file lain" : "Pilih file";
+  $("dlgTitle").textContent = picked.length > 1 ? `Transkrip ${picked.length} file` : "Transkrip file baru";
+  $("go").textContent = picked.length > 1 ? `Mulai ${picked.length} transkrip` : "Mulai transkrip";
+  $("go").disabled = !picked.length;
+}
+function pick(list) {
+  for (const f of list) if (!picked.some((p) => p.name === f.name && p.size === f.size)) picked.push(f);
+  renderPicked();
+}
+function openUpload(list) {
+  $("dlgErr").textContent = "";
+  if (list?.length) pick(list); else renderPicked();
+  $("dlg").showModal();
+  if (!picked.length) $("file").click();
+}
+$("upBtn").onclick = () => openUpload();
+$("drop").onclick = () => openUpload();
+$("pickAdd").onclick = () => $("file").click();
+$("plist").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-rm]"); if (!b) return;
+  picked.splice(+b.dataset.rm, 1); renderPicked();
+});
+$("file").onchange = (e) => { pick(e.target.files); e.target.value = ""; };
+["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => {
+  if ($("vHome").hidden) return; e.preventDefault(); $("drop").classList.add("over");
+}));
+["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => {
+  if ($("vHome").hidden) return; e.preventDefault(); $("drop").classList.remove("over");
+}));
+document.addEventListener("drop", (e) => {
+  const list = e.dataTransfer.files;
+  if ($("vHome").hidden || !list.length) return;
+  $("dlg").open ? pick(list) : openUpload(list);
+});
+
+$("dlg").addEventListener("close", () => {
+  if ($("dlg").returnValue !== "go" || !picked.length) return;
+  const opts = { model: $("model").value, language: $("language").value, prompt: $("prompt").value };
+  for (const file of picked) {
+    uploads.push({ key: crypto.randomUUID?.() ?? Math.random(), filename: file.name, created: Date.now() / 1000,
+                   status: "queued", progress: 0, file, opts });
+  }
+  toast(picked.length > 1 ? `${picked.length} file masuk antrean` : "Mulai mengunggah");
+  picked = []; renderPicked(); renderFiles();
+  pumpUploads();
+});
+
+// Unggah satu per satu supaya bandwidth tidak terbagi; transkripnya tetap jalan paralel di server.
+function pumpUploads() {
+  if (uploads.some((u) => u.status === "uploading")) return;
+  const u = uploads.find((x) => x.status === "queued");
+  if (!u) return;
+  u.status = "uploading";
+  const fd = new FormData();
+  fd.append("file", u.file);
+  for (const [k, v] of Object.entries(u.opts)) fd.append(k, v);
+  const xhr = new XMLHttpRequest();  // XHR agar progres unggah terlihat
+  xhr.open("POST", "/api/jobs");
+  xhr.upload.onprogress = (e) => { if (e.lengthComputable) { u.progress = e.loaded / e.total; renderFiles(); } };
+  const finish = (err) => {
+    uploads = uploads.filter((x) => x !== u);
+    if (err) toast(`${u.filename}: ${err}`);
+    loadFiles(); pumpUploads();
+  };
+  xhr.onload = () => {
+    let j = {}; try { j = JSON.parse(xhr.responseText || "{}"); } catch {}
+    finish(xhr.status === 200 ? null : (j.error || `gagal mengunggah (${xhr.status})`));
+  };
+  xhr.onerror = () => finish("koneksi ke server terputus");
+  xhr.send(fd);
+  renderFiles();
+}
+
+/* ================= editor ================= */
+let doc = null, segs = [], starts = [], curIdx = -1, editing = false, openT = null;
+const audio = $("audio");
+const SPK_COLORS = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6"];
+const spkName = (s) => /^(\d+-)?[A-Z]$|^speaker[_ ]?\d+$/i.test(s) ? `Pembicara ${s}` : s;
+
+async function openFile(id) {
+  clearTimeout(openT);
+  setEditing(false);
+  $("fq").value = ""; $("fcnt").textContent = "";
+  let j;
+  try { j = await api(`/api/jobs/${id}`); }
+  catch { $("docWrap").innerHTML = `<div class="panel working">File tidak ditemukan. <a href="#/">Kembali</a></div>`; return; }
+  if (j.status !== "done") {
+    $("title").value = j.filename; $("meta").textContent = j.status === "error" ? "Gagal" : "Sedang diproses";
+    $("tools").hidden = true; $("player").hidden = true;
+    $("docWrap").innerHTML = j.status === "error"
+      ? `<div class="panel working"><b>Transkrip gagal</b><p class="err-text">${esc(j.message)}</p></div>`
+      : `<div class="panel working"><b>Sedang mentranskrip…</b>
+         <div class="bar"><div style="width:${j.progress * 100}%"></div></div><div class="hint">${esc(j.message)}</div></div>`;
+    if (j.status === "running") openT = setTimeout(() => location.hash === `#/f/${id}` && openFile(id), 2000);
+    return;
+  }
+  doc = j; $("tools").hidden = false;
+  renderDoc();
+  if (j.has_media) {
+    $("player").hidden = false;
+    if (!audio.src.endsWith(`/api/jobs/${id}/media`)) { audio.src = `/api/jobs/${id}/media`; audio.playbackRate = +$("rate").value; }
+  } else { stopAudio(); $("player").hidden = true; }
+}
+
+function renderDoc() {
+  const r = doc.result;
+  segs = r.segments; starts = segs.map((s) => s.start); curIdx = -1;
+  $("title").value = doc.filename;
+  $("meta").textContent = `${clock(r.duration)} · ${r.model}${r.language ? " · " + r.language.toUpperCase() : ""} · ${fdate(doc.created)}`
+    + (doc.edited ? " · disunting" : "");
+
+  const colors = {};
+  segs.forEach((s) => { if (s.speaker && !(s.speaker in colors)) colors[s.speaker] = SPK_COLORS[Object.keys(colors).length % 6]; });
+
+  const wrap = document.createElement("article");
+  wrap.className = "panel doc";
+  if (segs.some((s) => s.approx)) {
+    wrap.insertAdjacentHTML("beforeend", `<div class="note">${IC.info}<span>Waktu tiap paragraf adalah perkiraan karena model ini tidak memberi timestamp.
+      Pakai model Whisper bila butuh waktu yang presisi.</span></div>`);
+  }
+  if (!doc.has_media) {
+    wrap.insertAdjacentHTML("beforeend", `<div class="note">${IC.info}<span>Audio file ini tidak tersimpan (ditranskrip sebelum fitur pemutar ada), jadi tidak bisa diputar.</span></div>`);
+  }
+  // Satu blok per pembicara; tanpa pembicara, blok dipotong tiap ±600 karakter atau jeda > 3 detik.
+  let blk = null, size = 0, prev = null;
+  segs.forEach((s, i) => {
+    const newBlk = !blk || s.speaker !== prev?.speaker || (!s.speaker && (size > 600 || s.start - prev.end > 3));
+    if (newBlk) {
+      blk = document.createElement("div"); blk.className = "blk";
+      const t = document.createElement("time"); t.textContent = (s.approx ? "~" : "") + clock(s.start); t.dataset.i = i;
+      const body = document.createElement("div");
+      if (s.speaker) {
+        const b = document.createElement("button"); b.className = "spk"; b.dataset.spk = s.speaker;
+        b.style.setProperty("--c", `var(${colors[s.speaker]})`); b.textContent = spkName(s.speaker);
+        body.append(b);
+      }
+      body.append(document.createElement("p"));
+      blk.append(t, body); wrap.append(blk); size = 0;
+    }
+    const span = document.createElement("span"); span.className = "seg"; span.dataset.i = i; span.textContent = s.text;
+    const p = blk.querySelector("p");
+    if (p.childNodes.length) p.append(" ");
+    p.append(span);
+    size += s.text.length; prev = s;
+  });
+  if (!segs.length) wrap.insertAdjacentHTML("beforeend", `<p class="hint">Tidak ada ucapan yang terdeteksi.</p>`);
+  $("docWrap").replaceChildren(wrap);
+  if ($("fq").value) runSearch();
+}
+
+const segEl = (i) => $("docWrap").querySelector(`.seg[data-i="${i}"]`);
+
+$("docWrap").addEventListener("click", async (e) => {
+  const spk = e.target.closest(".spk");
+  if (spk) return renameSpeaker(spk.dataset.spk);
+  if (editing) return;
+  const t = e.target.closest("time, .seg");
+  if (t && doc.has_media) { audio.currentTime = segs[+t.dataset.i].start + 0.01; audio.play(); }
+});
+
+async function renameSpeaker(old) {
+  const name = prompt(`Ganti nama untuk "${spkName(old)}" di seluruh transkrip:`, spkName(old));
+  if (!name || name.trim() === spkName(old)) return;
+  const payload = segs.map((s, i) => ({
+    text: editing ? (segEl(i)?.textContent ?? s.text) : s.text,
+    speaker: s.speaker === old ? name.trim() : s.speaker,
+  }));
+  await save({ segments: payload }, "Nama pembicara diganti");
+}
+
+async function save(body, msg) {
+  try {
+    doc = { ...(await api(`/api/jobs/${doc.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })) };
+    dirty = false; setEditing(false); renderDoc(); toast(msg);
+  } catch (err) { toast(err.message); }
+}
+
+function setEditing(on) {
+  editing = on;
+  $("vEditor").classList.toggle("editing", on);
+  $("editbar").hidden = !on;
+  $("editBtn").hidden = on;
+  $("docWrap").querySelectorAll(".seg").forEach((el) => {
+    if (on) { el.contentEditable = "plaintext-only"; el.spellcheck = false; } else el.removeAttribute("contenteditable");
+  });
+}
+$("editBtn").onclick = () => { audio.pause(); setEditing(true); };
+$("cancelEdit").onclick = () => { dirty = false; setEditing(false); renderDoc(); };
+$("saveEdit").onclick = () => save({ segments: segs.map((s, i) => ({ text: segEl(i)?.textContent ?? s.text })) }, "Perubahan disimpan");
+$("docWrap").addEventListener("input", () => { dirty = true; });
+$("docWrap").addEventListener("keydown", (e) => { if (editing && e.key === "Enter") e.preventDefault(); });
+
+$("title").addEventListener("keydown", (e) => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") { e.target.value = doc.filename; e.target.blur(); } });
+$("title").addEventListener("blur", () => {
+  const v = $("title").value.trim();
+  if (doc && v && v !== doc.filename) save({ filename: v }, "Judul diganti");
+  else if (doc) $("title").value = doc.filename;
+});
+
+/* ---------- cari di transkrip ---------- */
+let hits = [], hitPos = 0;
+function runSearch() {
+  const q = $("fq").value.trim().toLowerCase();
+  $("docWrap").querySelectorAll(".hit, .hit-cur").forEach((el) => el.classList.remove("hit", "hit-cur"));
+  hits = q ? segs.map((s, i) => s.text.toLowerCase().includes(q) ? i : -1).filter((i) => i >= 0) : [];
+  hits.forEach((i) => segEl(i)?.classList.add("hit"));
+  hitPos = 0;
+  $("fcnt").textContent = q ? (hits.length ? `1/${hits.length}` : "0") : "";
+  focusHit();
+}
+function focusHit() {
+  $("docWrap").querySelectorAll(".hit-cur").forEach((el) => el.classList.remove("hit-cur"));
+  if (!hits.length) return;
+  const el = segEl(hits[hitPos]); el.classList.add("hit-cur");
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  $("fcnt").textContent = `${hitPos + 1}/${hits.length}`;
+}
+$("fq").addEventListener("input", runSearch);
+$("fq").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || !hits.length) return;
+  hitPos = (hitPos + (e.shiftKey ? -1 : 1) + hits.length) % hits.length; focusHit();
+});
+
+/* ---------- ekspor ---------- */
+$("expBtn").onclick = (e) => { e.stopPropagation(); $("expMenu").hidden = !$("expMenu").hidden; };
+document.addEventListener("click", () => { $("expMenu").hidden = true; });
+$("expMenu").addEventListener("click", async (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.fmt) location.href = `/api/jobs/${doc.id}/download/${b.dataset.fmt}`;
+  else {
+    const txt = await (await fetch(`/api/jobs/${doc.id}/download/txt`)).text();
+    try { await navigator.clipboard.writeText(txt); toast("Teks disalin"); }
+    catch { toast("Browser menolak menyalin; pakai ekspor .txt"); }
+  }
+});
+
+/* ---------- pemutar ---------- */
+function stopAudio() { audio.pause(); audio.removeAttribute("src"); audio.load(); }
+const setPlayIcon = () => $("playBtn").innerHTML = audio.paused ? IC.play : IC.pause;
+$("playBtn").onclick = () => audio.paused ? audio.play() : audio.pause();
+$("back5").onclick = () => audio.currentTime = Math.max(0, audio.currentTime - 5);
+$("fwd5").onclick = () => audio.currentTime += 5;
+$("rate").onchange = () => audio.playbackRate = +$("rate").value;
+audio.addEventListener("play", setPlayIcon);
+audio.addEventListener("pause", setPlayIcon);
+audio.addEventListener("loadedmetadata", () => $("tDur").textContent = clock(audio.duration));
+let seeking = false;
+$("seek").addEventListener("input", () => { seeking = true; $("tCur").textContent = clock($("seek").value / 1000 * audio.duration); });
+$("seek").addEventListener("change", () => { audio.currentTime = $("seek").value / 1000 * audio.duration; seeking = false; });
+audio.addEventListener("timeupdate", () => {
+  const t = audio.currentTime;
+  if (!seeking) { $("tCur").textContent = clock(t); if (audio.duration) $("seek").value = t / audio.duration * 1000; }
+  // segmen aktif = start terakhir yang ≤ t (pencarian biner)
+  let lo = 0, hi = starts.length - 1, idx = -1;
+  while (lo <= hi) { const mid = (lo + hi) >> 1; if (starts[mid] <= t) { idx = mid; lo = mid + 1; } else hi = mid - 1; }
+  if (idx === curIdx) return;
+  segEl(curIdx)?.classList.remove("cur");
+  curIdx = idx;
+  const el = segEl(idx);
+  if (!el) return;
+  el.classList.add("cur");
+  const r = el.getBoundingClientRect();
+  if (!audio.paused && (r.top < 120 || r.bottom > innerHeight - 110)) el.scrollIntoView({ block: "center", behavior: "smooth" });
+});
+setPlayIcon();
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") $("expMenu").hidden = true;
+  const typing = e.target.closest("input, textarea, select, [contenteditable]");
+  if (typing || $("vEditor").hidden || $("player").hidden) return;
+  if (e.code === "Space") { e.preventDefault(); audio.paused ? audio.play() : audio.pause(); }
+  if (e.key === "ArrowLeft") audio.currentTime = Math.max(0, audio.currentTime - 5);
+  if (e.key === "ArrowRight") audio.currentTime += 5;
+});
+
+/* ================= pengaturan ================= */
+$("keySave")?.addEventListener("click", async () => {
+  $("keyErr").textContent = "";
+  try {
+    await api("/api/key", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: $("keyInput").value }) });
+    $("keyStatus").textContent = "sudah diatur"; $("keyStatus").className = "ok-text"; $("keyInput").value = "";
+    document.querySelector(".banner")?.remove(); toast("API key disimpan");
+  } catch (err) { $("keyErr").textContent = err.message; }
+});
+
+route();
+</script>
+</body>
+</html>
