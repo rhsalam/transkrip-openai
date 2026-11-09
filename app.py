@@ -14,6 +14,8 @@ from dotenv import set_key
 from flask import Flask, Response, abort, jsonify, render_template, request, send_file
 from werkzeug.utils import secure_filename
 
+import openai
+
 import transcriber as tr
 
 BASE = Path(__file__).parent
@@ -24,6 +26,9 @@ RESULTS = DATA / "results"
 MEDIA = DATA / "media"
 for d in (UPLOADS, RESULTS, MEDIA):
     d.mkdir(parents=True, exist_ok=True)
+# Antrean hanya di memori, jadi sisa unggahan dari proses sebelumnya tidak bisa diulang lagi.
+for leftover in UPLOADS.iterdir():
+    leftover.unlink(missing_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024**3  # 2 GB; ffmpeg yang mengecilkannya
@@ -35,6 +40,8 @@ save_lock = threading.Lock()
 # Berapa file yang ditranskrip bersamaan; sisanya antre agar tidak kena rate limit OpenAI.
 MAX_PARALLEL = int(os.environ.get("MAX_PARALLEL", 3))
 slots = threading.BoundedSemaphore(MAX_PARALLEL)
+# File unggahan dan opsi dari transkrip yang gagal, agar bisa diulang tanpa unggah lagi.
+failed: dict[str, tuple[Path, str | None, str | None]] = {}
 
 LOOPBACK = {"127.0.0.1", "::1"}
 
@@ -74,15 +81,36 @@ def _save(rec: dict) -> None:
     _meta_path(rec["id"]).write_text(json.dumps(rec, ensure_ascii=False), encoding="utf-8")
 
 
+def _error_message(e: Exception) -> str:
+    """Terjemahkan error OpenAI yang umum jadi pesan yang bisa ditindaklanjuti."""
+    if isinstance(e, openai.RateLimitError):
+        if getattr(e, "code", None) in ("insufficient_quota", "credit_balance_exhausted") \
+                or "credit" in str(e) or "quota" in str(e):
+            return "Saldo API OpenAI habis. Isi saldo di platform.openai.com, lalu klik Ulangi."
+        return "Terlalu banyak permintaan ke OpenAI. Tunggu sebentar, lalu klik Ulangi."
+    if isinstance(e, openai.AuthenticationError):
+        return "API key OpenAI ditolak. Periksa di halaman Pengaturan, lalu klik Ulangi."
+    if isinstance(e, openai.APIConnectionError):
+        return "Tidak bisa terhubung ke OpenAI. Periksa internet, lalu klik Ulangi."
+    if isinstance(e, openai.APIStatusError) and e.status_code >= 500:
+        return "Server OpenAI sedang bermasalah. Coba lagi beberapa menit lagi."
+    return str(e)
+
+
 def _run(job_id: str, src: Path, model: str, language: str | None, prompt: str | None) -> None:
     try:
         with slots:
             _update(job_id, message="Menyiapkan audio…")
             _transcribe_job(job_id, src, model, language, prompt)
     except Exception as e:  # noqa: BLE001 — pesan apa pun ditampilkan ke pengguna
-        _update(job_id, status="error", message=str(e))
-    finally:
+        failed[job_id] = (src, language, prompt)
+        _update(job_id, status="error", message=_error_message(e), retryable=True)
+    else:
         src.unlink(missing_ok=True)
+
+
+def _start(job_id: str, src: Path, model: str, language: str | None, prompt: str | None) -> None:
+    threading.Thread(target=_run, daemon=True, args=(job_id, src, model, language, prompt)).start()
 
 
 def _transcribe_job(job_id: str, src: Path, model: str, language: str | None, prompt: str | None) -> None:
@@ -164,11 +192,30 @@ def create_job():
         jobs[job_id] = {"id": job_id, "filename": upload.filename, "created": time.time(),
                         "status": "running", "progress": 0.0, "message": "Menunggu antrean…",
                         "model": model}
-    threading.Thread(
-        target=_run, daemon=True,
-        args=(job_id, src, model, request.form.get("language") or None,
-              request.form.get("prompt", "").strip() or None),
-    ).start()
+    _start(job_id, src, model, request.form.get("language") or None,
+           request.form.get("prompt", "").strip() or None)
+    return jsonify(id=job_id)
+
+
+@app.post("/api/jobs/<job_id>/retry")
+def retry_job(job_id: str):
+    """Ulangi transkrip yang gagal dengan file unggahan yang sama; model boleh diganti."""
+    _valid_id(job_id)
+    model = (request.json or {}).get("model") if request.is_json else None
+    if model and model not in tr.MODELS:
+        return jsonify(error="Model tidak dikenal."), 400
+    with jobs_lock:
+        job = jobs.get(job_id)
+        if not job or job["status"] != "error" or job_id not in failed:
+            return jsonify(error="File ini tidak bisa diulang; unggah ulang filenya."), 409
+        src, language, prompt = failed.pop(job_id)
+        if not src.exists():
+            job["retryable"] = False
+            return jsonify(error="File unggahan sudah tidak ada; unggah ulang filenya."), 410
+        job.update(status="running", progress=0.0, message="Menunggu antrean…", retryable=False,
+                   model=model or job["model"])
+        model = job["model"]
+    _start(job_id, src, model, language, prompt)
     return jsonify(id=job_id)
 
 
@@ -226,6 +273,8 @@ def delete_job(job_id: str):
         if jobs.get(job_id, {}).get("status") == "running":
             return jsonify(error="Masih diproses."), 409
         jobs.pop(job_id, None)
+    if job_id in failed:
+        failed.pop(job_id)[0].unlink(missing_ok=True)
     _meta_path(job_id).unlink(missing_ok=True)
     _media_path(job_id).unlink(missing_ok=True)
     return jsonify(ok=True)

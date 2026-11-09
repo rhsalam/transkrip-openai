@@ -90,7 +90,7 @@
             padding: 6px 10px; background: var(--bg); color: var(--muted); min-width: 240px; }
   .search input { border: 0; outline: 0; background: transparent; width: 100%; color: var(--text); }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  th.w-dur { width: 100px; } th.w-date { width: 170px; } th.w-st { width: 190px; } th.w-act { width: 64px; }
+  th.w-dur { width: 100px; } th.w-date { width: 170px; } th.w-st { width: 210px; } th.w-act { width: 96px; }
   th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase;
        letter-spacing: .04em; padding: 10px 18px; border-bottom: 1px solid var(--line); }
   td { padding: 12px 18px; border-bottom: 1px solid var(--line); vertical-align: middle; }
@@ -113,11 +113,14 @@
   .mini { width: 90px; height: 5px; border-radius: 9px; background: var(--line); overflow: hidden; margin-top: 6px; }
   .mini > div { height: 100%; background: var(--accent); transition: width .4s; }
   .sub { font-size: 12px; color: var(--muted); margin-top: 2px; max-width: 260px; }
-  .sub.bad { color: var(--bad); }
+  .sub.bad { color: var(--bad); overflow-wrap: anywhere; }
   .empty { padding: 48px 18px; text-align: center; color: var(--muted); }
-  td.act { text-align: right; }
+  td.act { text-align: right; white-space: nowrap; padding-left: 8px; }
   td.act .btn { color: var(--faint); }
   td.act .btn:hover { color: var(--bad); }
+  td.act .btn.retry { color: var(--accent); }
+  td.act .btn.retry:hover { color: var(--accent); background: var(--accent-soft); }
+  .files-head .right { display: flex; align-items: center; gap: 8px; }
 
   /* ---------- editor ---------- */
   .ed { display: flex; flex-direction: column; min-height: 100vh; }
@@ -240,7 +243,7 @@
     .search { min-width: 0; flex: 1; }
     .files-head { flex-wrap: wrap; padding: 12px 14px; }
     th.hide-s, td.hide-s { display: none; }
-    th.w-st { width: 118px; } th.w-act { width: 48px; }
+    th.w-st { width: 118px; } th.w-act { width: 84px; }
     td, th { padding: 10px 14px; }
     .ed-top .in { padding: 10px 16px; flex-wrap: wrap; }
     .ed-tools { width: 100%; }
@@ -290,7 +293,10 @@
       <div class="panel">
         <div class="files-head">
           <h2>Semua file</h2>
-          <label class="search"><span data-ic="search"></span><input id="q" placeholder="Cari nama atau isi…"></label>
+          <div class="right">
+            <button class="btn" id="retryAll" hidden><span data-ic="rw"></span><span id="retryAllT">Ulangi yang gagal</span></button>
+            <label class="search"><span data-ic="search"></span><input id="q" placeholder="Cari nama atau isi…"></label>
+          </div>
         </div>
         <table>
           <thead><tr><th>Nama</th><th class="hide-s w-dur">Durasi</th><th class="hide-s w-date">Tanggal</th><th class="w-st">Status</th><th class="w-act"></th></tr></thead>
@@ -529,6 +535,9 @@ function renderFiles() {
   $("stDur").textContent = human(done.reduce((a, f) => a + (f.duration || 0), 0));
   $("empty").hidden = list.length > 0;
   $("empty").textContent = q ? "Tidak ada file yang cocok." : "Belum ada file. Unggah rekaman pertama Anda.";
+  const retryable = files.filter((f) => f.retryable);
+  $("retryAll").hidden = retryable.length < 2;
+  $("retryAllT").textContent = `Ulangi ${retryable.length} yang gagal`;
   $("rows").innerHTML = list.map((f) => `
     <tr class="${f.status === "done" ? "click" : ""}" data-id="${f.id || ""}">
       <td><div class="fname">
@@ -538,13 +547,14 @@ function renderFiles() {
       <td class="num hide-s">${f.duration ? clock(f.duration) : "–"}</td>
       <td class="num hide-s">${fdate(f.created)}</td>
       <td>${statusCell(f)}</td>
-      <td class="act">${f.status === "done" || f.status === "error"
-        ? `<button class="btn icon quiet del" title="Hapus">${IC.trash}</button>` : ""}</td>
+      <td class="act">${f.retryable ? `<button class="btn icon quiet retry" title="Ulangi transkrip">${IC.rw}</button>` : ""}${
+        f.status === "done" || f.status === "error" ? `<button class="btn icon quiet del" title="Hapus">${IC.trash}</button>` : ""}</td>
     </tr>`).join("");
 }
 
 $("rows").addEventListener("click", async (e) => {
   const tr = e.target.closest("tr"); if (!tr || !tr.dataset.id) return;
+  if (e.target.closest(".retry")) return retry(tr.dataset.id).then(loadFiles);
   if (e.target.closest(".del")) {
     const f = files.find((x) => x.id === tr.dataset.id);
     if (!confirm(`Hapus "${f.filename}" beserta transkripnya?`)) return;
@@ -555,6 +565,17 @@ $("rows").addEventListener("click", async (e) => {
   if (tr.classList.contains("click")) location.hash = `#/f/${tr.dataset.id}`;
 });
 $("q").addEventListener("input", renderFiles);
+
+async function retry(id) {
+  try { await api(`/api/jobs/${id}/retry`, { method: "POST" }); return true; }
+  catch (err) { toast(err.message); return false; }
+}
+$("retryAll").onclick = async () => {
+  const ids = files.filter((f) => f.retryable).map((f) => f.id);
+  for (const id of ids) await retry(id);
+  toast(`${ids.length} file diulang`);
+  loadFiles();
+};
 
 /* ---------- unggah ---------- */
 let picked = [];
@@ -664,9 +685,12 @@ async function openFile(id) {
     $("title").value = j.filename; $("meta").textContent = j.status === "error" ? "Gagal" : "Sedang diproses";
     $("tools").hidden = true; $("player").hidden = true;
     $("docWrap").innerHTML = j.status === "error"
-      ? `<div class="panel working"><b>Transkrip gagal</b><p class="err-text">${esc(j.message)}</p></div>`
+      ? `<div class="panel working"><b>Transkrip gagal</b><p class="err-text">${esc(j.message)}</p>
+         ${j.retryable ? `<button class="btn primary" id="retryOne">${IC.rw} Ulangi transkrip</button>`
+                       : `<p class="hint">File unggahannya sudah tidak tersimpan; hapus lalu unggah ulang.</p>`}</div>`
       : `<div class="panel working"><b>Sedang mentranskrip…</b>
          <div class="bar"><div style="width:${j.progress * 100}%"></div></div><div class="hint">${esc(j.message)}</div></div>`;
+    if ($("retryOne")) $("retryOne").onclick = async () => { if (await retry(id)) openFile(id); };
     if (j.status === "running") openT = setTimeout(() => location.hash === `#/f/${id}` && openFile(id), 2000);
     return;
   }
